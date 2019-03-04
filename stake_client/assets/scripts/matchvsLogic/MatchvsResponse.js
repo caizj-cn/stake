@@ -98,11 +98,27 @@ MatchvsResponse.prototype.joinOverNotify = function (notify) {
 };
 
 /**
- * 发送消息
+ * 发送消息回调
  * @param sendEventRsp
  */
 MatchvsResponse.prototype.sendEventResponse = function (sendEventRsp) {
     this.context.node.emit(msg.MATCHVS_SEND_EVENT_RSP,sendEventRsp);
+};
+
+/**
+ * 设置房间属性回调
+ * @param setRoomPropertyResponse
+ */
+MatchvsResponse.prototype.setRoomPropertyResponse = function (rsp) {
+    this.context.node.emit(msg.MATCHVS_SET_ROOM_PROPETY, rsp);
+};
+
+/**
+ * 设置房间属性通知
+ * @param setRoomPropertyNotify
+ */
+MatchvsResponse.prototype.setRoomPropertyNotify = function (notify) {
+    this.context.node.emit(msg.MATCHVS_SET_ROOM_PROPETY_NOTIFY, notify);
 };
 
 /**

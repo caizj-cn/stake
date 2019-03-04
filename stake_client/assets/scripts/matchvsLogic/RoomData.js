@@ -5,46 +5,101 @@
 var obj = {
     roomID: 0, // 房间ID
     ownerID: 0, // 房主ID
-    roomProperty: '', // 房间属性
+    roomProperty: '', // 房间属性（存储房间所有信息json）
     smallBetRatio: 10, // 小押注比率
     bigBetRatio: 20, // 大押注比率
-    userInfoList: [], // 玩家信息列表
+    users_in: [], // 在房间的玩家
+    users_out: [], // 不在房间的玩家（下注过）
+
+    // 获取房间信息
+    getRoomProperty(){
+        let data = {};
+        data.users_in  = this.users_in;
+        data.users_out = this.users_out;
+        return JSON.stringify(data);
+    },
 
     // 更新玩家信息
     updateUserInfo(userInfo){
-        for(let i = 0; i < this.userInfoList.length; i++){
-            if(this.userInfoList[i].userID == userInfo.userID){
-                this.userInfoList[i].big = userInfo.big;
-                this.userInfoList[i].small = userInfo.small;
-                break;
+        // 在房间内
+        for(let i = 0; i < this.users_in.length; i++){
+            if(this.users_in[i].userID == userInfo.userID){
+                this.users_in[i] = userInfo;
+                return;
+            }
+        }
+
+        // 不在房间内
+        for(let i = 0; i < this.users_out.length; i++){
+            if(this.users_out[i].userID == userInfo.userID){
+                this.users_in[i] = userInfo;
+                return;
             }
         }
     },
 
     // 清除玩家
     clearUsers(){
-        this.userInfoList = [];
+        this.users_in = [];
+        this.users_out = [];
     },
 
     // 添加玩家
     addUser(userInfo){
-        for(let i = 0; i < this.userInfoList.length; i++){
-            if(this.userInfoList[i].userID == userInfo.userID){
+        // 在里面
+        for(let i = 0; i < this.users_in.length; i++){
+            if(this.users_in[i].userID == userInfo.userID){
                 return;
             }
         }
 
-        this.userInfoList.push(userInfo);
+        // 退出了再进来的
+        for(let i = 0; i < this.users_out.length; i++){
+            if(this.users_out[i].userID == userInfo.userID){
+                this.users_out.splice(i, 1);                
+                return;
+            }
+        }
+
+        this.users_in.push(userInfo);
     },
 
     // 删除玩家
     removeUser(userInfo){
-        for(let i = 0; i < this.userInfoList.length; i++){
-            if(this.userInfoList[i].userID == userInfo.userID){
-                this.userInfoList.splice(i, 1);
+        // 房间内查找
+        for(let i = 0; i < this.users_in.length; i++){
+            if(this.users_in[i].userID == userInfo.userID){
+                this.users_in.splice(i, 1);
                 break;
             }
         }
+
+        // 已经标记的直接更新
+        for(let i = 0; i < this.users_out.length; i++){
+            if(this.users_out[i].userID == userInfo.userID){
+                return;
+            }
+        }
+        this.users_out.push(userInfo);
+    },
+
+    // 根据玩家ID获取信息
+    getUserInfoByID(userID){
+        // 在房间的
+        for(let i = 0; i < this.users_in.length; i++){
+            if(this.users_in[i].userID == userID){
+                return this.users_in[i];
+            }
+        }
+
+        // 不在房间的
+        for(let i = 0; i < this.users_out.length; i++){
+            if(this.users_out[i].userID == userID){
+                return this.users_out[i];
+            }
+        }
+
+        return null;
     },
 }
 

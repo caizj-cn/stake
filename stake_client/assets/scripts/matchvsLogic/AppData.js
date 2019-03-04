@@ -9,7 +9,7 @@ var obj = {
     gameVersion: 1,
     appKey: '9bfb1c3e8bdb4178b8f142df4f45ce25#C',
     userName:'pgy',
-    mxaNumer:2,
+    mxaNumer:3,
 }
 
 module.exports = obj;

@@ -4,26 +4,12 @@ var msg = require('MatvhsvsMessage');
 var appData = require('AppData');
 var userData = require('UserData');
 var roomData = require('RoomData');
+var dataMgr = require('dataMgr');
 
 cc.Class({
     extends: cc.Component,
 
     properties: {
-        // foo: {
-        //     // ATTRIBUTES:
-        //     default: null,        // The default value will be used only when the component attaching
-        //                           // to a node for the first time
-        //     type: cc.SpriteFrame, // optional, default is typeof default
-        //     serializable: true,   // optional, default is true
-        // },
-        // bar: {
-        //     get () {
-        //         return this._bar;
-        //     },
-        //     set (value) {
-        //         this._bar = value;
-        //     }
-        // },
     },
 
     // LIFE-CYCLE CALLBACKS:
@@ -42,7 +28,6 @@ cc.Class({
     onClick(btn, cd){
         switch(cd){
             case 'play': {
-                // cc.director.loadScene('lobby');
                 this.play();
                 break;
             }
@@ -64,16 +49,6 @@ cc.Class({
         this.node.on(msg.MATCHVS_INIT, this.initResponse, this);
         this.node.on(msg.MATCHVS_REGISTER_USER,this.registerUserResponse,this);
         this.node.on(msg.MATCHVS_LOGIN,this.loginResponse,this);
-        // this.node.on(msg.MATCHVS_JOIN_ROOM_RSP,this.joinRoomResponse,this);
-        // this.node.on(msg.MATCHVS_JOIN_ROOM_NOTIFY,this.joinRoomNotify,this);
-        // this.node.on(msg.MATCHVS_JOIN_OVER_RSP,this.joinOverResponse,this);
-        // this.node.on(msg.MATCHVS_JOIN_OVER_NOTIFY,this.joinOverNotify,this);
-        // this.node.on(msg.MATCHVS_SEND_EVENT_RSP,this.sendEventResponse,this);
-        // this.node.on(msg.MATCHVS_SEND_EVENT_NOTIFY,this.sendEventNotify,this);
-        // this.node.on(msg.MATCHVS_LEAVE_ROOM,this.leaveRoomResponse,this);
-        // this.node.on(msg.MATCHVS_LEAVE_ROOM_NOTIFY,this.leaveRoomNotify,this);
-        // this.node.on(msg.MATCHVS_LOGOUT,this.logoutResponse,this);
-        // this.node.on(msg.MATCHVS_ERROE_MSG,this.errorResponse,this);
     },
 
     /**
@@ -83,16 +58,6 @@ cc.Class({
         this.node.off(msg.MATCHVS_INIT, this.initResponse, this);
         this.node.off(msg.MATCHVS_REGISTER_USER,this.registerUserResponse,this);
         this.node.off(msg.MATCHVS_LOGIN,this.loginResponse,this);
-        // this.node.off(msg.MATCHVS_JOIN_ROOM_RSP,this.joinRoomResponse,this);
-        // this.node.off(msg.MATCHVS_JOIN_ROOM_NOTIFY,this.joinRoomNotify,this);
-        // this.node.off(msg.MATCHVS_JOIN_OVER_RSP,this.joinOverResponse,this);
-        // this.node.off(msg.MATCHVS_JOIN_OVER_NOTIFY,this.joinOverNotify,this);
-        // this.node.off(msg.MATCHVS_SEND_EVENT_RSP,this.sendEventResponse,this);
-        // this.node.off(msg.MATCHVS_SEND_EVENT_NOTIFY,this.sendEventNotify,this);
-        // this.node.off(msg.MATCHVS_LEAVE_ROOM,this.leaveRoomResponse,this);
-        // this.node.off(msg.MATCHVS_LEAVE_ROOM_NOTIFY,this.leaveRoomNotify,this);
-        // this.node.off(msg.MATCHVS_LOGOUT,this.logoutResponse,this);
-        // this.node.off(msg.MATCHVS_ERROE_MSG,this.errorResponse,this);
     },
 
     /**
@@ -101,11 +66,11 @@ cc.Class({
      */
     initResponse(status) {
         if(status == 200) {
-            // cc.log('initResponse：初始化成功，status：'+status);
+            cc.log('initResponse：初始化成功，status：'+status);
             this.networkFlow.register();
             cc.log('dddddd');
         } else {
-            // cc.log('initResponse：初始化失败，status：'+status)
+            cc.log('initResponse：初始化失败，status：'+status)
         }
     },
 
@@ -117,10 +82,9 @@ cc.Class({
         if (userInfo.status == 0) {
             userData.userID = userInfo.id;
             userData.token = userInfo.token;
-            appData.userName = userInfo.name;
             userData.name = userInfo.name;
             userData.avatar = userInfo.avatar;
-
+            appData.userName = userInfo.name;
             this.networkFlow.login();
         } else {
             cc.log('registerUserResponse: 注册用户失败');

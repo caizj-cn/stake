@@ -37,6 +37,8 @@ cc.Class({
         // this.node.on(msg.MATCHVS_LEAVE_ROOM_NOTIFY,this.leaveRoomNotify,this);
         // this.node.on(msg.MATCHVS_LOGOUT,this.logoutResponse,this);
         // this.node.on(msg.MATCHVS_ERROE_MSG,this.errorResponse,this);
+        // this.node.on(msg.MATCHVS_SET_ROOM_PROPETY,this.setRoomPropertyResponse,this);
+        // this.node.on(msg.MATCHVS_SET_ROOM_PROPETY_NOTIFY,this.setRoomPropertyNotify,this);
     },
 
     /**
@@ -57,6 +59,8 @@ cc.Class({
         // this.node.off(msg.MATCHVS_LEAVE_ROOM_NOTIFY,this.leaveRoomNotify,this);
         // this.node.off(msg.MATCHVS_LOGOUT,this.logoutResponse,this);
         // this.node.off(msg.MATCHVS_ERROE_MSG,this.errorResponse,this);
+        // this.node.off(msg.MATCHVS_SET_ROOM_PROPETY,this.setRoomPropertyResponse,this);
+        // this.node.off(msg.MATCHVS_SET_ROOM_PROPETY,this.setRoomPropertyNotify,this);
     },
 
     /**
@@ -98,9 +102,9 @@ cc.Class({
     /**
      * 创建房间
      */
-    createRoom(userProfile) {
+    createRoom(userProfile, roomProperty) {
         if(appData.mxaNumer != 0){
-            var result = engine.prototype.createRoom(appData.mxaNumer, userProfile);
+            var result = engine.prototype.createRoom(appData.mxaNumer, userProfile, roomProperty);
             cc.log('玩家人数:' + appData.mxaNumer);
 
             if(result == 0){
@@ -155,6 +159,14 @@ cc.Class({
     joinOver() {
         var result = engine.prototype.joinOver();
         this.engineCode(result,'joinOver');
+    },
+
+    /**
+     * 设置房间属性
+     */
+    setRoomProperty(roomID, roomProperty) {
+        var result = engine.prototype.setRoomProperty(roomID, roomProperty);
+        this.engineCode(result,'setRoomProperty');
     },
 
     /**
@@ -341,6 +353,22 @@ cc.Class({
         } else if (leaveRoomRsp.status == 500) {
             cc.log('leaveRoomResponse：服务器错误');
         }
+    },
+
+    /**
+     * 设置房间信息回调
+     * @param rsp
+     */
+    setRoomPropertyResponse(rsp){
+
+    },
+
+    /**
+     * 设置房间信息通知
+     * @param notify
+     */
+    setRoomPropertyNotify(notify){
+
     },
 
     /**

@@ -4,6 +4,7 @@ var msg = require('MatvhsvsMessage');
 var appData = require('AppData');
 var userData = require('UserData');
 var roomData = require('RoomData');
+var dataMgr = require('dataMgr');
 
 cc.Class({
     extends: cc.Component,
@@ -11,6 +12,7 @@ cc.Class({
     properties: {
         labelRoomID: cc.Label,
         labelOwerID: cc.Label,
+        labelLoginID: cc.Label,
         labelBig: cc.Label,
         labelSmall: cc.Label,
         labelTotal: cc.Label,
@@ -24,26 +26,34 @@ cc.Class({
         this.networkFlow = this.getComponent('NetworkFlow');
         this.initMatchvsEvent(this);
 
-        this.labelOwerID.string = '房主：' + roomData.ownerID;
         this.labelRoomID.string = '房号：' + roomData.roomID;
 
-        this.updateBetInfo();
-
-        this.betNum = 0;
+        this.updateUserUI();
+        this.updateBetUI();
     },
 
     start () {
 
     },
 
-    updateBetInfo(){
+    updateBetUI(){
         let [total, tSmall, tBig] = [0, 0, 0];
-        for(let i = 0; i < roomData.userInfoList.length; i++){
-            let userID = roomData.userInfoList[i].userID;
-            let small = roomData.userInfoList[i].small;
-            let big = roomData.userInfoList[i].big;
+        
+        // 房间内玩家
+        for(let i = 0; i < roomData.users_in.length; i++){
+            let userID = roomData.users_in[i].userID;
+            let small = roomData.users_in[i].small;
+            let big = roomData.users_in[i].big;
+            tSmall = tSmall + small * roomData.smallBetRatio;
+            tBig = tBig + big * roomData.bigBetRatio;
+            total = tSmall + tBig;
+        }
 
-            cc.log('userID:' + userID + ' small:' + small + ' big:' + big);
+        // 不在房间内玩家
+        for(let i = 0; i < roomData.users_out.length; i++){
+            let userID = roomData.users_out[i].userID;
+            let small = roomData.users_out[i].small;
+            let big = roomData.users_out[i].big;
             tSmall = tSmall + small * roomData.smallBetRatio;
             tBig = tBig + big * roomData.bigBetRatio;
             total = tSmall + tBig;
@@ -52,6 +62,11 @@ cc.Class({
         this.labelBig.string = tBig;
         this.labelSmall.string = tSmall;
         this.labelTotal.string = total;
+    },
+
+    updateUserUI(){
+        this.labelOwerID.string = '房主：' + roomData.ownerID;
+        this.labelLoginID.string = '玩家：' + userData.userID;
     },
 
     // update (dt) {},
@@ -82,25 +97,19 @@ cc.Class({
 
     betBig(){
         userData.preBig = userData.actBig + 1;
-
-        let data = {};
-        data.userID = userData.userID;
-        data.small = userData.actSmall;
-        data.big = userData.preBig;
-        this.networkFlow.sendEvent(JSON.stringify(data));
+        let myInfo = dataMgr.getUserInfoWithID(userData.userID);
+        myInfo.small = userData.actSmall;
+        myInfo.big = userData.preBig;
+        this.networkFlow.sendEvent(JSON.stringify(myInfo));
     },
 
     betSmall(){
         userData.preSmall = userData.actSmall + 1;
-
-        let data = {};
-        data.userID = userData.userID;
-        data.small = userData.preSmall;
-        data.big = userData.actBig;
-        this.networkFlow.sendEvent(JSON.stringify(data));
+        let myInfo = dataMgr.getUserInfoWithID(userData.userID);
+        myInfo.small = userData.preSmall;
+        myInfo.big = userData.actBig;
+        this.networkFlow.sendEvent(JSON.stringify(myInfo));
     },
-
-    // bet(type, )
 
     /**
      * 注册对应的事件监听和把自己的原型传递进入，用于发送事件使用
@@ -114,6 +123,9 @@ cc.Class({
         this.node.on(msg.MATCHVS_SEND_EVENT_NOTIFY,this.sendEventNotify,this);
         this.node.on(msg.MATCHVS_LEAVE_ROOM,this.leaveRoomResponse,this);
         this.node.on(msg.MATCHVS_JOIN_ROOM_NOTIFY,this.joinRoomNotify,this);
+        this.node.on(msg.MATCHVS_LEAVE_ROOM_NOTIFY,this.leaveRoomNotify,this);
+        this.node.on(msg.MATCHVS_SET_ROOM_PROPETY,this.setRoomPropertyResponse,this);
+        this.node.on(msg.MATCHVS_SET_ROOM_PROPETY_NOTIFY,this.setRoomPropertyNotify,this);
     },
 
     /**
@@ -124,6 +136,9 @@ cc.Class({
         this.node.off(msg.MATCHVS_SEND_EVENT_NOTIFY,this.sendEventNotify,this);
         this.node.off(msg.MATCHVS_LEAVE_ROOM,this.leaveRoomResponse,this);
         this.node.off(msg.MATCHVS_JOIN_ROOM_NOTIFY,this.joinRoomNotify,this);
+        this.node.off(msg.MATCHVS_LEAVE_ROOM_NOTIFY,this.leaveRoomNotify,this);
+        this.node.off(msg.MATCHVS_SET_ROOM_PROPETY,this.setRoomPropertyResponse,this);
+        this.node.off(msg.MATCHVS_SET_ROOM_PROPETY,this.setRoomPropertyNotify,this);
     },
 
     onDestroy() {
@@ -137,6 +152,16 @@ cc.Class({
     leaveRoomResponse(leaveRoomRsp) {
         if (leaveRoomRsp.status == 200) {
             cc.log('leaveRoomResponse：离开房间成功，房间ID是'+leaveRoomRsp.roomID);
+            let myInfo = roomData.getUserInfoByID(userData.userID);
+            if(myInfo == null){
+                myInfo = dataMgr.getUserInfoWithID(userData.userID);
+            }
+            roomData.removeUser(myInfo);
+            
+            // 更新房间信息
+            let roomProperty = roomData.getRoomProperty();
+            this.networkFlow.setRoomProperty(roomData.roomID, roomProperty);
+            
             cc.director.loadScene('lobby');
         } else if (leaveRoomRsp.status == 400) {
             cc.log('leaveRoomResponse：客户端参数错误,请检查参数');
@@ -148,6 +173,59 @@ cc.Class({
     },
 
     /**
+     * 其他离开房间通知
+     * @param leaveRoomInfo
+     */
+    leaveRoomNotify(leaveRoomInfo) {
+        cc.log('leaveRoomNotify：' + leaveRoomInfo.userID + '离开房间，房间ID是' + leaveRoomInfo.roomID);
+        cc.log(leaveRoomInfo.owner + '   ' + leaveRoomInfo.cpProto);
+        
+        roomData.ownerID = leaveRoomInfo.owner;
+
+        let userInfo = roomData.getUserInfoByID(leaveRoomInfo.userID);
+        if(userInfo != null){
+            roomData.removeUser(userInfo);
+
+            // 更新房间信息
+            let roomProperty = roomData.getRoomProperty();
+            this.networkFlow.setRoomProperty(roomData.roomID, roomProperty);
+        }
+
+        this.updateUserUI();
+    },
+
+    /**
+     * 设置房间信息回调
+     * @param rsp
+     */
+    setRoomPropertyResponse(rsp){
+        if(rsp.status == 200){
+            if(rsp.roomID == roomData.roomID && rsp.userID == userData.userID){
+                roomData.roomProperty = rsp.roomProperty;
+                let data = JSON.parse(rsp.roomProperty);
+                this.roomData.users_in = data.users_in;
+                this.roomData.users_out = data.users_out;
+            }
+        }
+        else{
+            cc.log('setRoomPropertyResponse失败', rsp);
+        }
+    },
+
+    /**
+     * 设置房间信息通知
+     * @param notify
+     */
+    setRoomPropertyNotify(notify){
+        if(notify.roomID == roomData.roomID){
+            roomData.roomProperty = notify.roomProperty;
+            let data = JSON.parse(rsp.roomProperty);
+            this.roomData.users_in = data.users_in;
+            this.roomData.users_out = data.users_out;
+        }
+    },
+
+    /**
      * 发送消息回调
      * @param sendEventRsp
      */
@@ -155,14 +233,21 @@ cc.Class({
         this.enableBet(true);
 
         if (sendEventRsp.status == 200) {
+            // 下注成功，要更新
             userData.actBig = userData.preBig;
             userData.actSmall = userData.preSmall;
-            roomData.updateUserInfo({
-                userID: userData.userID, 
-                big: userData.actBig, 
-                small: userData.actSmall
-            });
-            this.updateBetInfo();
+
+            // 更新我的下注信息
+            let myInfo   = dataMgr.getUserInfoWithID(userData.userID);
+            myInfo.big   = userData.actBig;
+            myInfo.small = userData.actSmall;
+            roomData.updateUserInfo(myInfo);
+
+            // 更新房间信息
+            let roomProperty = roomData.getRoomProperty();
+            this.networkFlow.setRoomProperty(roomData.roomID, roomProperty);
+
+            this.updateBetUI();
             cc.log('sendEventResponse：发送消息成功');
         } else {
             cc.log('sendEventResponse：发送消息失败');
@@ -174,10 +259,19 @@ cc.Class({
      * @param eventInfo
      */
     sendEventNotify(eventInfo) {
-        cc.log('sendEventNotify：用户' + eventInfo.srcUserID + '对你使出了一招' + eventInfo.cpProto);
-        let data = JSON.parse(eventInfo.cpProto);
-        roomData.updateUserInfo(data);
-        this.updateBetInfo();
+        cc.log('sendEventNotify：用户' + eventInfo.srcUserID + '数据' + eventInfo.cpProto);
+        
+        // 更新玩家下注信息
+        let userInfo   = dataMgr.getUserInfoWithID(eventInfo.srcUserID);
+        let data       = JSON.parse(eventInfo.cpProto);
+        userInfo.big   = data.big;
+        userInfo.small = data.small;
+        roomData.updateUserInfo(userInfo);
+
+        // 更新房间信息
+        let roomProperty = roomData.getRoomProperty();
+        this.networkFlow.setRoomProperty(roomData.roomID, roomProperty);
+        this.updateBetUI();
     },
 
     /**
@@ -188,7 +282,14 @@ cc.Class({
         cc.log('joinRoomNotify：加入房间的玩家ID是' + roomUserInfo.userID);
         cc.log(roomUserInfo);
 
-        let data = JSON.parse(roomUserInfo.userProfile);
-        roomData.addUser(data);
+        let userInfo = roomData.getUserInfoByID(roomUserInfo.userID);
+        if(userInfo == null){
+            userInfo = dataMgr.getUserInfoWithID(roomUserInfo.userID);
+        }
+        roomData.addUser(userInfo);
+
+        // 更新房间信息
+        let roomProperty = roomData.getRoomProperty();
+        this.networkFlow.setRoomProperty(roomData.roomID, roomProperty);
     },
 });

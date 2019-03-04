@@ -46,14 +46,14 @@ MatchvsEngine.prototype.login = function(userID,token){
  * @param mxaNumer 房间最大人数
  * @returns {number}
  */
-MatchvsEngine.prototype.createRoom = function(mxaNumer, userProfile){
+MatchvsEngine.prototype.createRoom = function(mxaNumer, userProfile, roomProperty){
     var createRoom = new mvs.MsCreateRoomInfo();
     createRoom.name = 'roomName';
     createRoom.maxPlayer = mxaNumer;
     createRoom.mode = 0;
     createRoom.canWatch = 1;
     createRoom.visibility = 1;
-    createRoom.roomProperty = '白天模式';
+    createRoom.roomProperty = roomProperty;
     var result = mvs.engine.createRoom(createRoom, userProfile);
     console.log("createRoom result"+result);
     return result;
@@ -88,6 +88,16 @@ MatchvsEngine.prototype.joinRandomRoom = function(mxaNumer){
 MatchvsEngine.prototype.joinOver = function(){
     var result = mvs.engine.joinOver("关闭房间");
     console.log("joinOver result"+result);
+    return result;
+};
+
+/**
+ * 设置房间属性
+ * @returns {number}
+ */
+MatchvsEngine.prototype.setRoomProperty = function(roomID, roomProperty){
+    var result = mvs.engine.setRoomProperty(roomID, roomProperty);
+    console.log("setRoomProperty result"+result);
     return result;
 };
 

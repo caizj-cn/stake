@@ -4,6 +4,7 @@ var msg = require('MatvhsvsMessage');
 var appData = require('AppData');
 var userData = require('UserData');
 var roomData = require('RoomData');
+var dataMgr = require('dataMgr');
 
 cc.Class({
     extends: cc.Component,
@@ -34,39 +35,20 @@ cc.Class({
     onClick(btn, cd){
         switch(cd){
             case 'create': {
-                // cc.director.loadScene('game');
-                let user = this.getUserInfo();
-                roomData.userInfoList = [];
-                // roomData.userInfoList.push(user);
-
-                this.networkFlow.createRoom(JSON.stringify(user));
+                this.networkFlow.createRoom('玩家简介', '{}');
                 break;
             }
             case 'open_join': {
-                // cc.director.loadScene('game');
                 this.nodeJoin.active = true;                
                 break;
             }
             case 'join': {
                 let roomID = this.editRoomID.string;
                 cc.log('房间号：' + roomID);
-
-                let user = this.getUserInfo();
-                roomData.userInfoList = [];
-                // roomData.userInfoList.push(user);
-
-                this.networkFlow.joinRoom(roomID, JSON.stringify(user));
+                this.networkFlow.joinRoom(roomID, '玩家简介');
                 break;
             }
         }
-    },
-
-    getUserInfo(){
-        let user = {};
-        user.userID = userData.userID;
-        user.small = 0;
-        user.big = 0;
-        return user;
     },
 
     /**
@@ -101,20 +83,52 @@ cc.Class({
      */
     joinRoomResponse(status, userInfoList, roomInfo) {
         if (status == 200) {
+            // 我加入成功
+            roomData.clearUsers();
             roomData.roomID = roomInfo.roomID;
             roomData.ownerID = roomInfo.ownerId;
             roomData.roomProperty = roomInfo.roomProperty;
 
-            cc.log('joinRoomResponse: 进入房间成功：房间ID为：' + roomInfo.roomID + '房主ID：' + roomInfo.ownerId + '房间属性为：' + roomInfo.roomProperty);
-            for(var i = 0; i < userInfoList.length; i++) {
-                cc.log('joinRoomResponse：房间的玩家ID是' + userInfoList[i].userID);
-                roomData.addUser(JSON.parse(userInfoList[i].userProfile));
+            // 添加房间已有玩家
+            let data = JSON.parse(roomInfo.roomProperty);
+            for(let i = 0; i < data.users_in.length; i++){
+                roomData.addUser(data.users_in[i]);
             }
-            if (userInfoList.length == 0) {
-                cc.log('joinRoomResponse：房间暂时无其他玩家');
+            for(let i = 0; i < data.users_out.length; i++){
+                roomData.addUser(data.users_out[i]);
             }
 
+            // 我之前不在房间内
+            let myInfo = roomData.getUserInfoByID(userData.userID);
+            if(myInfo == null){
+                myInfo = dataMgr.getUserInfoWithID(userData.userID);
+                roomData.addUser(myInfo);
+            }
+
+            // 更新房间信息
+            let roomProperty = roomData.getRoomProperty();
+            this.networkFlow.setRoomProperty(roomData.roomID, roomProperty);
+
             cc.director.loadScene('game');
+            // // 不包含自己
+            // for(var i = 0; i < userInfoList.length; i++) {
+            //     let userInfo = dataMgr.getUserInfoWithID(userInfoList[i].userID);                
+                
+            //     for(let j = 0; j < data.users_in.length; j++){
+            //         if(data[j].userID === userInfoList[i].userID){
+            //             userInfo.big   = data[j].big;
+            //             userInfo.small = data[j].small;
+            //         }
+            //     }
+
+            //     roomData.addUser(userInfo);
+            // }
+
+            
+
+            // if (userInfoList.length == 0) {
+            //     cc.log('joinRoomResponse：房间暂时无其他玩家');
+            // }            
 
         } else {
             cc.log('joinRoomResponse：进入房间失败');
@@ -127,17 +141,18 @@ cc.Class({
      */
     createRoomResponse(CreateRoomRsp) {
         if (CreateRoomRsp.status == 200) {
+            // 房间信息
+            roomData.clearUsers();
             roomData.roomID = CreateRoomRsp.roomID;
             roomData.ownerID = CreateRoomRsp.owner;
-            cc.log('createRoomResponse: 创建房间成功：房间ID为：' + CreateRoomRsp.roomID + '房主ID：' + CreateRoomRsp.owner);
+
+            let myInfo = dataMgr.getUserInfoWithID(userData.userID);
+            roomData.addUser(myInfo);
+
+            // 更新房间信息
+            let roomProperty = roomData.getRoomProperty();
+            this.networkFlow.setRoomProperty(roomData.roomID, roomProperty);
             
-            let user = {
-                userID: userData.userID,
-                big: 0,
-                small: 0,
-            }
-            roomData.clearUsers();
-            roomData.addUser(user);
             cc.director.loadScene('game');
 
         } else if (CreateRoomRsp.status == 400) {
